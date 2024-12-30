@@ -23,7 +23,7 @@ Follow these steps to set up the project locally:
    npm init -y
 3. Install the following dependencies by using this command
    ```bash
-   npm install express mysql2 body-parser cors bcryptjs jsonwebtoken dotenv
+   npm install express mysql2 body-parser cors bcryptjs jsonwebtoken dotenv express-validator
    
 ## Environmental Variables
 4. Setup the **.env** file in the root directory of the project and add the environment variables:
