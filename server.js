@@ -4,13 +4,14 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
 // Create an Express app
 const app = express();
 
 // Middleware
-app.use(bodyParser.json()); // Parse JSON bodies
+app.use(bodyParser.json()); 
 app.use(cors());
 
 // MySQL connection setup
@@ -30,11 +31,22 @@ db.connect((err) => {
   console.log('Connected to the MySQL database');
 });
 
-// User Registration Route
-app.post('/register', (req, res) => {
+// User Registration Route with validation
+app.post('/register', [
+  body('username').notEmpty().withMessage('Username is required'),
+  body('email').isEmail().withMessage('Invalid email address').normalizeEmail(),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long').matches(/\d/).matches(/[a-zA-Z]/).matches(/[!@#$%^&*(),.?":{}|<>]/),
+  body('phoneNumber').isMobilePhone().withMessage('Invalid phone number'),
+  body('dob').isDate().withMessage('Invalid date of birth')
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
   const { username, email, password, phoneNumber, gender, dob } = req.body;
 
-  // Hash the password before saving to the database
+  // Hash the password and proceed with registration
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
       return res.status(500).json({ message: 'Error hashing password' });
@@ -50,6 +62,7 @@ app.post('/register', (req, res) => {
   });
 });
 
+
 // User Login Route
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
@@ -58,7 +71,7 @@ app.post('/login', (req, res) => {
   const query = 'SELECT * FROM users WHERE email = ?';
   db.query(query, [email], (err, result) => {
     if (err || result.length === 0) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'No credentials found. Register now' });
     }
 
     const user = result[0];
@@ -69,7 +82,7 @@ app.post('/login', (req, res) => {
       }
 
       // Generate a JWT token for authentication
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1hr' });
 
       res.status(200).json({
         message: 'Login successful',
